@@ -34,8 +34,24 @@ const validatePassword = (value) => {
     return 'Password is required';
   }
 
-  if (trimmedValue.length < 6) {
-    return 'Password must be at least 6 characters';
+  if (trimmedValue.length < 8) {
+    return 'Password must be at least 8 characters';
+  }
+
+  if (!/[A-Z]/.test(trimmedValue)) {
+    return 'Password must contain at least one uppercase letter';
+  }
+
+  if (!/[a-z]/.test(trimmedValue)) {
+    return 'Password must contain at least one lowercase letter';
+  }
+
+  if (!/[0-9]/.test(trimmedValue)) {
+    return 'Password must contain at least one digit';
+  }
+
+  if (!/[!@#$%^&*(),.?":{}|<>_\-\\[\]=+;'/`~]/.test(trimmedValue)) {
+    return 'Password must contain at least one special character';
   }
 };
 
@@ -44,11 +60,11 @@ const generateTokens = async (res, user) => {
   const accessToken = jwtService.sign(normalizedUser);
   const refreshToken = jwtService.signRefresh(normalizedUser);
 
-  await tokenService.save(normalizedUser, refreshToken);
+  await tokenService.save(normalizedUser.id, refreshToken);
 
   res.cookie('refreshToken', refreshToken, {
     maxAge: 30 * 24 * 60 * 60 * 1000,
-    HttpOnly: true,
+    httpOnly: true,
   });
 
   res.send({
@@ -85,9 +101,8 @@ const activate = async (req, res) => {
   }
 
   user.activationToken = null;
-  user.save();
-
-  res.send(user);
+  await user.save();
+  res.send({ redirectUrl: '/profile' });
 };
 
 const login = async (req, res) => {
@@ -97,6 +112,12 @@ const login = async (req, res) => {
 
   if (!user) {
     throw ApiError.badRequest('No such user');
+  }
+
+  if (user.activationToken !== null) {
+    throw ApiError.badRequest('Please activate your email before logging in', {
+      email: 'Email is not activated.',
+    });
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -130,9 +151,13 @@ const logout = async (req, res) => {
   if (!userData || !refreshToken) {
     throw ApiError.unauthorized();
   }
-  await tokenService.remove(userData.d);
+  await tokenService.remove(userData.id);
 
-  res.sendStatus(204);
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+  });
+
+  res.redirect('/login');
 };
 
 module.exports = {
