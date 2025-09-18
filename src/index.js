@@ -5,7 +5,6 @@ const { authRouter } = require('./routes/auth.route.js');
 const cors = require('cors');
 const { errorMiddleware } = require('./middlewares/errorMiddleware.js');
 const cookieParser = require('cookie-parser');
-const { authOnly } = require('./middlewares/authOnly.js');
 
 const server = express();
 

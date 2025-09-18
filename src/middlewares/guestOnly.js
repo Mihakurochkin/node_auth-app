@@ -16,6 +16,7 @@ function guestOnly(req, _, next) {
 
   if (userData) {
     req.user = userData;
+
     return next(ApiError.unauthorized());
   }
 

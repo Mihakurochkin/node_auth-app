@@ -21,6 +21,11 @@ authRouter.post('/login', guestOnly, catchError(authController.login));
 authRouter.post('/logout', authOnly, catchError(authController.logout));
 authRouter.post('/refresh', catchError(authController.refresh));
 authRouter.post('/password-reset', guestOnly, catchError(authController.reset));
-authRouter.post('/password-reset/:token', guestOnly, catchError(authController.reset));
+
+authRouter.post(
+  '/password-reset/:token',
+  guestOnly,
+  catchError(authController.reset),
+);
 
 module.exports = { authRouter };
