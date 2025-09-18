@@ -11,6 +11,10 @@ function findByEmail(email) {
   return User.findOne({ where: { email } });
 }
 
+function findById(id) {
+  return User.findByPk(id);
+}
+
 async function register(email, password) {
   const activationToken = uuidv4();
   const existUser = await findByEmail(email);
@@ -26,10 +30,36 @@ async function register(email, password) {
   await emailService.sendActivationEmail(email, activationToken);
 }
 
+async function saveResetToken(userId, token) {
+  const user = findById(userId);
+
+  if (!user) {
+    throw ApiError.badRequest('No such user');
+  }
+
+  user.resetToken = token;
+  await user.save();
+}
+
+async function updatePassword(userId, newHashedPassword) {
+  const user = findById(userId);
+
+  if (!user) {
+    throw ApiError.badRequest('No such user');
+  }
+
+  user.password = newHashedPassword;
+  user.resetToken = null;
+  await user.save();
+}
+
 const userService = {
   normalize,
   findByEmail,
+  findById,
   register,
+  saveResetToken,
+  updatePassword,
 };
 
 module.exports = { userService };

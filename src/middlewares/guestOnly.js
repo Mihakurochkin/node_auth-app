@@ -1,6 +1,7 @@
 const { jwtService } = require('../services/jwt.service');
+const { ApiError } = require('../exeptions/api.error.js');
 
-function guestOnly(req, res, next) {
+function guestOnly(req, _, next) {
   const authorization = req.headers['authorization'] || '';
   const [, token] = authorization.split(' ');
   const refreshToken = req.cookies && req.cookies.refreshToken;
@@ -14,9 +15,11 @@ function guestOnly(req, res, next) {
   }
 
   if (userData) {
-    return res.status(403).json({ message: 'Already authenticated' });
+    req.user = userData;
+    return next(ApiError.unauthorized());
   }
 
+  req.user = null;
   next();
 }
 

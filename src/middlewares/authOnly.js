@@ -1,6 +1,7 @@
 const { jwtService } = require('../services/jwt.service.js');
+const { ApiError } = require('../exeptions/api.error.js');
 
-function authOnly(req, res, next) {
+function authOnly(req, _, next) {
   const authorization = req.headers['authorization'] || '';
   const [, token] = authorization.split(' ');
   const refreshToken = req.cookies && req.cookies.refreshToken;
@@ -14,9 +15,10 @@ function authOnly(req, res, next) {
   }
 
   if (!userData) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    return next(ApiError.unauthorized());
   }
 
+  req.user = userData;
   next();
 }
 

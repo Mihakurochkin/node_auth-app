@@ -3,9 +3,9 @@ require('dotenv').config();
 const express = require('express');
 const { authRouter } = require('./routes/auth.route.js');
 const cors = require('cors');
-const { userRouter } = require('./routes/user.route.js');
 const { errorMiddleware } = require('./middlewares/errorMiddleware.js');
 const cookieParser = require('cookie-parser');
+const { authOnly } = require('./middlewares/authOnly.js');
 
 const server = express();
 
@@ -18,8 +18,12 @@ server.use(
     credentials: true,
   }),
 );
+
 server.use(authRouter);
-server.use('/users', userRouter);
+
+server.use((_, res) => {
+  res.status(404).json({ message: 'Not Found' });
+});
 
 server.use(errorMiddleware);
 

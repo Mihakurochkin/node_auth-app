@@ -4,6 +4,7 @@ const { jwtService } = require('../services/jwt.service.js');
 const { ApiError } = require('../exeptions/api.error.js');
 const bcrypt = require('bcrypt');
 const { tokenService } = require('../services/token.service.js');
+const { emailService } = require('../services/email.service.js');
 
 const validateEmail = (value) => {
   if (typeof value !== 'string') {
@@ -55,6 +56,22 @@ const validatePassword = (value) => {
   }
 };
 
+const validateName = (value) => {
+  if (typeof value !== 'string') {
+    return 'Name must be a string';
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return 'Name is required';
+  }
+
+  if (!/^[A-Za-z'’\- ]{2,}$/.test(trimmedValue)) {
+    return 'Name is not valid';
+  }
+};
+
 const generateTokens = async (res, user) => {
   const normalizedUser = userService.normalize(user);
   const accessToken = jwtService.sign(normalizedUser);
@@ -74,19 +91,26 @@ const generateTokens = async (res, user) => {
 };
 
 const register = async (req, res) => {
-  const { email, password } = req.body;
+  const { name, email, password } = req.body;
   const errors = {
+    name: validateName(name),
     email: validateEmail(email),
     password: validatePassword(password),
   };
 
-  if (errors.email || errors.password) {
+  Object.keys(errors).forEach((key) => {
+    if (errors[key] === undefined) {
+      delete errors[key];
+    }
+  });
+
+  if (Object.keys(errors).length > 0) {
     throw ApiError.badRequest('Bad request', errors);
   }
 
   const hashedPass = await bcrypt.hash(password, 10);
 
-  await userService.register(email, hashedPass);
+  await userService.register(name, email, hashedPass);
   res.send({ message: 'OK' });
 };
 
@@ -160,14 +184,53 @@ const logout = async (req, res) => {
   res.redirect('/login');
 };
 
+const resetRequest = async (req, res) => {
+  const { email } = req.body;
+  const user = await userService.findByEmail(email);
+
+  if (!user) {
+    throw ApiError.badRequest('No such user');
+  }
+
+  const resetToken = jwtService.signReset(user);
+  await userService.saveResetToken(user.id, resetToken);
+
+  const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+  await emailService.sendPasswordResetEmail(user.email, resetLink);
+  res.json({ message: 'Password reset email sent' });
+};
+
+const confirmReset = async (req, res) => {
+  const { resetToken } = req.params;
+  const { newPassword, confirmNewPassword } = req.body;
+
+  if (newPassword !== confirmNewPassword) {
+    throw ApiError.badRequest('Passwords do not match');
+  }
+
+  const userData = jwtService.verifyReset(resetToken);
+
+  if (!userData) {
+    throw ApiError.badRequest('Invalid or expired token.');
+  }
+
+  const newHashedPassword = await bcrypt.hash(newPassword, 10);
+  await userService.updatePassword(userData.id, newHashedPassword);
+
+  res.send({ message: 'Password updated successfully' });
+};
+
 module.exports = {
   validateEmail,
   validatePassword,
+  validateName,
   authController: {
     register,
     activate,
     login,
     refresh,
     logout,
+    confirmReset,
+    resetRequest,
   },
 };
