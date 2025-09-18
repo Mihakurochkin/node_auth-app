@@ -31,8 +31,23 @@ function sendActivationEmail(email, token) {
   });
 }
 
+function sendPasswordResetEmail(email, token) {
+  const href = `${process.env.CLIENT_URL}/reset-password/${token}`;
+  const html = `
+  <h1>Reset your password</h1>
+  <a href="${href}"></a>
+  `;
+
+  return send({
+    email,
+    html,
+    subject: 'Reset password',
+  });
+}
+
 const emailService = {
   sendActivationEmail,
+  sendPasswordResetEmail,
   send,
 };
 

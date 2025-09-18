@@ -195,10 +195,7 @@ const resetRequest = async (req, res) => {
   const resetToken = jwtService.signReset(user);
 
   await userService.saveResetToken(user.id, resetToken);
-
-  const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-
-  await emailService.sendPasswordResetEmail(user.email, resetLink);
+  await emailService.sendPasswordResetEmail(user.email, resetToken);
   res.json({ message: 'Password reset email sent' });
 };
 
